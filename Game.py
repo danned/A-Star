@@ -2,7 +2,8 @@ import random
 #import Agent as Agent
 from Agent import Agent
 import Judge
-
+from AStar import aStar
+from Node import Node
 class Deck:
     # strength of each type
     HAND_RANK = {'2': 1,
@@ -71,12 +72,13 @@ class Game:
 
     def deal(self):
         # pop 5 cards 2 times
-        self.deck.extend( ['3h', 'Js', 'Qh', 'Kd', 'Ah','3s', '4d', 'Qd', 'Kc', 'Ad' ])
+        #self.deck.extend( ['3h', 'Js', 'Qh', 'Kd', 'Ah','3s', '4d', 'Qd', 'Kc', 'Ad' ])
         for i in  range(2):
             for _ in range(5):
                 self.agents[i].giveCard(self.deck.pop())
 
         self.defineHand()
+        self.winner = Judge.judgeHands(self.agents[0].getRankedHand(), self.agents[1].getRankedHand())
         self.state = "bid"
 
     def bid(self):
@@ -86,12 +88,22 @@ class Game:
         agent2Action = "none"
         agent2ActionValue = 0
 
+        search = aStar(self.agents[0].getStack(),self.agents[1].getType(), self.agents[1].getRank(),self.agents[1].getStack(), self.winner == 1)
+        result = search.start()
+        actions = []
+        while type(result) is Node and not result.getAction() is None:
+            actions.insert(0,result.getAction())
+            result = result.getPre()
         while True:#(playerAction, playerActionValue, playerStack, agentHand, agentHandRank, agentStack)
-            # agentAction, agentValue
+            # agentAction, agentValuewinner = Judge.judgeHands(self.agents[0].getRankedHand(),self.agents[1].getRankedHand())
             #agent2ActionValue = 1
-            agent1Response = self.agents[0].getAction(agent2Action, agent2ActionValue, self.agents[1].getStack(),\
-                                                      self.agents[0].getType(), self.agents[0].getRank(), self.agents[0].getStack())
-            agent1Action, agent1ActionValue = agent1Response
+            action = actions.pop(0)
+            agent1Action = action[0]
+            agent1ActionValue = action[1]
+            print agent1Action, " ", agent1ActionValue
+            #agent1Response = self.agents[0].getAction(agent2Action, agent2ActionValue, self.agents[1].getStack(),\
+                              #                        self.agents[0].getType(), self.agents[0].getRank(), self.agents[0].getStack())
+            #agent1Action, agent1ActionValue = agent1Response
             self.agents[0].decreaseStack(agent1ActionValue)
             if agent1Action == 'Fold':
                 print "Agent1 folding"
@@ -103,7 +115,8 @@ class Game:
                 self.pot = self.pot + agent1ActionValue
                 #self.state = "showdown"
                 break
-
+            print "Agent1 betting ", agent1ActionValue
+            self.pot = self.pot + agent1ActionValue
             agent2Response = self.agents[1].getAction(agent1Action, agent1ActionValue, self.agents[0].getStack(),\
                                                       self.agents[1].getType(), self.agents[1].getRank(), self.agents[1].getStack())
             agent2Action, agent2ActionValue = agent2Response
@@ -120,14 +133,13 @@ class Game:
                 #self.state = "showdown"
                 break
 
-            self.pot = self.pot + agent1ActionValue + agent2ActionValue
+            self.pot = self.pot + agent2ActionValue
             print "Both agents betting"
 
+            if self.agents[0].isBroke() or self.agents[1].isBroke():
+                break
+
         self.state = "showdown"
-
-
-
-
 
     # let the judge define hand strenghts
     def defineHand(self):
@@ -143,7 +155,8 @@ class Game:
             winner = self.folded
         else:
             # 1 if player 1 win, 0  draw, -1 if player 2.
-            winner = Judge.judgeHands(self.agents[0].getRankedHand(),self.agents[1].getRankedHand())
+            winner = self.winner
+
 
 
         print "Agent1hand: ", self.agents[0].getRankedHand()

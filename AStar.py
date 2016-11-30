@@ -1,52 +1,157 @@
-#import Judge.handRank as handRank
-#import Judge.typeRank as typeRank
-import Judge
+from Node import Node
+from Judge import handRank
+from Judge import typeRank
 
-handRank = Judge.handRank
-typeRank = Judge.typeRank
+class aStar(object):
+    #openList = []
+    #closedList = []
+    #map = []
+    #solvedMap = np.zeros(shape=(60,60))
+    def __init__( self, playerStack, agentHand, agentHandRank, agentStack, willWin,heuristic = None):
+        self.openList = []
+        self.closedList = []
+        self.willWin = willWin
+        self.openList.insert(0,Node(0,0,playerStack, False, None, None))
+        self.heuristic = heuristic
+        self.playerStack = playerStack
+        self.agentHand = agentHand
+        self.agentHandRank = agentHandRank
+        self.agentStack = agentStack
+        self.currentBest = None
 
-#Judge.handRank
-class Agent:
-    def __init__(self,startingStack):
-        self.hand = []
-        self.stack = startingStack
-        self.rankedHand = []
+    #iterates the map to find the endpoint
+    def start(self):
+        while len(self.openList) > 0:
+            node = self.openList.pop(0)
+            print "Looking at node: ", str(node)
+            if self.agentStack - node.getF() <= 0:
+                return node
 
-    def giveCard(self,c):
-        self.hand.append(c)
+            self.closedList.append(node)
+            if not node.isEndNode():
+                self.expandNode(node)
+            else:
+                if not type(self.currentBest) is Node:
+                    self.currentBest = node
+                elif self.currentBest > node:
+                    self.currentBest = node
 
-    def getHand(self):
-        return self.hand
 
-    def setRankedHand(self, rc):
-        self.rankedHand = rc
 
-    def getRankedHand(self):
-        return self.rankedHand
+        return self.currentBest
 
-    def removeHand(self):
-        self.hand = []
-        self.rankedHand = []
 
-    def getType(self):
-        return self.rankedHand[0]
 
-    def getRank(self):
-        i = len(self.rankedHand[1])-1
-        return self.rankedHand[1][i][0]
+    def expandNode(self, node):
+        sucessors = []
+        currentAgentStack = self.agentStack-node.getG()
+        currentPlayerStack = node.getStack()
+        invested = self.playerStack-node.getStack()
+        possibleEarnings = node.getG()
+        if node.getStack() >  1:
+            earning = self.getEarnings(1, node.getStack(), self.agentStack-node.getG())
+            if earning[0] == "Call" and not self.willWin:
+                sucessors.append(Node(node, -node.getG() - (self.playerStack-node.getStack()) -1, node.getStack() - 1, earning[0] != "Bet", ["Bet", 1], earning))
+            else:
+                sucessors.append(Node(node,earning[1],node.getStack()-1,earning[0] != "Bet", ["Bet",1],earning))
+        if node.getStack() > 5:
+            earning = self.getEarnings(5, node.getStack(), self.agentStack-node.getG())
+            if earning[0] == "Call" and not self.willWin:
+                sucessors.append(Node(node, -node.getG()- (self.playerStack-node.getStack())-5, node.getStack() - 5, earning[0] != "Bet", ["Bet", 5],earning))
+            else:
+                sucessors.append(Node(node,earning[1],node.getStack()-5,earning[0] != "Bet",["Bet",5],earning))
 
-    def getStack(self):
-        return self.stack
+        if node.getStack() > 10:
+            earning = self.getEarnings(10, node.getStack(), self.agentStack-node.getG())
+            if earning[0] == "Call" and not self.willWin:
+                sucessors.append(Node(node, -node.getG()- (self.playerStack-node.getStack())-10, node.getStack() - 10, earning[0] != "Bet", ["Bet", 10],earning))
+            else:
+                sucessors.append(Node(node,earning[1],node.getStack()-10,earning[0] != "Bet",["Bet",10],earning))
 
-    def addWinnings(self,pot):
-        self.stack += pot
+        # call
+        if self.willWin:
+            sucessors.append(Node(node, 0, node.getStack(),True,["Call",0],None))
+        else:
+            # fold
+            sucessors.append(Node(node, -node.getG() - (self.playerStack-node.getStack()), node.getStack(),True,["Fold",0],None))
 
-    def isBroke(self):
-        return self.stack <= 0
+        for s in sucessors:
+            # this should never happen in poker tree
+            if s in self.closedList:
+                continue
+            #newG = node.g + 1
+            # This should never happen in poker tree
+            if s in self.openList:
+                continue
+            #    if newG >= self.gOpenList(s):
+            #        continue
+                # found shorter path to node, replace
+            #    i = self.openList.index(s)
+            #    self.openList[i] = s
+                # print self.openList, " now sorting \n"
+            #    self.openList.sort()
+                # print self.openList
+            self.openList.append(s)
+            # print self.openList., " now sorting \n"
+            self.openList.sort()
+            # s.predecessor = node
 
-    def decreaseStack(self,value):
-        self.stack -= value
+        #Maybe wrong
+       # print self.map.shape[0]
+        #print y
+        #print x
 
+        """
+        if y+1 < self.map.shape[0]:
+            if self.map[y + 1, x] != -1:
+                sucessors.append(Node(node,y+1,x, self.heuristic))
+            else:
+                self.solvedMap[y + 1, x] = -1
+
+        if y-1 >= 0:
+            if self.map[y - 1, x] != -1:
+                sucessors.append(Node(node,y-1,x, self.heuristic))
+            else:
+                self.solvedMap[y - 1, x] = -1
+
+
+        if x+1  < self.map.shape[1]:
+            if self.map[y, x + 1] != -1:
+                sucessors.append(Node(node,y,x+1, self.heuristic))
+            else:
+                self.solvedMap[y, x + 1] = -1
+
+        if x-1  >= 0:
+            if self.map[y, x - 1] != -1:
+                sucessors.append(Node(node,y,x-1, self.heuristic))
+            else:
+                self.solvedMap[y, x - 1] = -1
+
+        for s in sucessors:
+            if s in self.closedList:
+                continue
+            newG = node.g + 1
+            if s in self.openList:
+                if newG >= self.gOpenList(s):
+                    continue
+                # found shorter path to node, replace
+                i = self.openList.index(s)
+                self.openList[i] = s
+                #print self.openList, " now sorting \n"
+                self.openList.sort()
+                #print self.openList
+            self.openList.append(s)
+            #print self.openList., " now sorting \n"
+            self.openList.sort()
+            #s.predecessor = node
+            """
+
+    def getEarnings(self, playerActionValue, playerStack, agentStack):
+        return self.getAction(None, playerActionValue, playerStack, self.agentHand, self.agentHandRank, agentStack)
+
+    def gOpenList(self,node):
+        i = self.openList.index(node)
+        return self.openList[i].getG()
 
     def getAction(self, playerAction, playerActionValue, playerStack, agentHand, agentHandRank, agentStack):  #
 
@@ -108,8 +213,10 @@ class Agent:
                             agentAction = 'Bet'
                             agentValue = agentStack
                         else:
+                            agentAction = 'Bet'
                             agentAction = 'Fold'
-                            agentValue = 0
+                        agentValue = 0
+                        agentValue = playerActionValue * 2
                 else:
                     if agentStack < playerActionValue:
                         agentAction = 'Bet'
