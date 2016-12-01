@@ -4,6 +4,8 @@ from Agent import Agent
 import Judge
 from AStar import aStar
 from Node import Node
+
+agent2earnings = 0
 class Deck:
     # strength of each type
     HAND_RANK = {'2': 1,
@@ -183,6 +185,9 @@ class Game:
         if self.isContinue():
             self.state = "deal"
         else:
+            print "Number of rounds: ", self.roundNumber
+            global agent2earnings
+            agent2earnings += self.agents[1].getStack()
             self.state = "end"
 
 
@@ -204,5 +209,8 @@ class Game:
                 print "showdown"
                 self.showdown()
 
-game = Game(5000)
-game.mainFlow()
+for _ in range(1000):
+    game = Game(5000)
+    game.mainFlow()
+
+print "Agent 2 won: ", agent2earnings

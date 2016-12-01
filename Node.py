@@ -6,12 +6,13 @@ class Node(object):
     #g = 0
     map = 0
 
-    def __init__(self, pre, earning, stack,endNode, action, predictedAction):
+    def __init__(self, pre, earning, stack,endNode, action, predictedAction, invested):
         global endPoint
         self.predecessor = pre
         #print type(pre)
         self.action = action
         self.stack = stack
+        self.invested = invested
         self.endNode = endNode
         self.predictedAction = predictedAction
         if type(pre) is Node:
@@ -21,11 +22,11 @@ class Node(object):
         else:
             self.g = 0
 
-        self.f = self.g#heuristic( point , endPoint) + self.g
+        self.f = self.g - self.heuristic( )
 
     def __eq__(self, other):
         #print "Node() __eq__ called"
-        return False#self.x == other.x and self.y == other.y # same position means same node
+        return self.f == other.f and type(other.predecessor) == type(self.predecessor) #False#self.x == other.x and self.y == other.y # same position means same node
 
     def __cmp__(self,other):
         return other.f - self.f
@@ -49,3 +50,9 @@ class Node(object):
 
     def getPre(self):
         return self.predecessor
+
+    def getInvested(self):
+        return self.invested
+
+    def heuristic(self):
+        return self.invested/200 # normalised with max stack
